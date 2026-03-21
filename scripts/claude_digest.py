@@ -36,10 +36,8 @@ def get_claude_briefing():
         # pause_turn: server-side tool loop hit its limit — append and retry
         messages.append({"role": "assistant", "content": response.content})
 
-    return next(
-        (b.text for b in response.content if b.type == "text"),
-        "No briefing available.",
-    )
+    text_blocks = [b.text for b in response.content if b.type == "text"]
+    return text_blocks[-1] if text_blocks else "No briefing available."
 
 
 def build_payload(briefing_text):
