@@ -2,7 +2,7 @@ name: Weekly Claude AI Threat Briefing
 
 on:
   schedule:
-    - cron: "30 18 * * 1"   # Monday 18:30 UTC = 10:30pm GMT+4
+    - cron: "30 6 * * 1"    # Monday 06:30 UTC = 10:30am GMT+4
   workflow_dispatch:          # run manually from GitHub UI anytime
 
 jobs:
