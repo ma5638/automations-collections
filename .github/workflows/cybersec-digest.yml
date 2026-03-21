@@ -19,10 +19,15 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install feedparser requests
+        run: pip install feedparser requests anthropic
 
-      - name: Send digest to Discord
+      - name: Message 1 — RSS Feed Digest
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          CLAUDE_API_KEY: ${{ secrets.CLAUDE_KEY }}   # reserved for future use
         run: python scripts/cybersec_digest.py
+
+      - name: Message 2 — Claude AI Threat Briefing
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_KEY }}
+        run: python scripts/claude_digest.py
