@@ -21,7 +21,7 @@ def get_claude_briefing():
     }]
     tools = [{"type": "web_search_20260209", "name": "web_search"}]
 
-    response = None
+    all_text = []
     for _ in range(5):  # handle pause_turn continuations
         response = client.messages.create(
             model="claude-opus-4-6",
@@ -30,14 +30,17 @@ def get_claude_briefing():
             messages=messages,
         )
 
+        for block in response.content:
+            if block.type == "text":
+                all_text.append(block.text)
+
         if response.stop_reason in ("end_turn", "max_tokens"):
             break
 
         # pause_turn: server-side tool loop hit its limit — append and retry
         messages.append({"role": "assistant", "content": response.content})
 
-    text_blocks = [b.text for b in response.content if b.type == "text"]
-    return "\n\n".join(text_blocks) if text_blocks else "No briefing available."
+    return "\n\n".join(all_text) if all_text else "No briefing available."
 
 
 def build_payload(briefing_text):
