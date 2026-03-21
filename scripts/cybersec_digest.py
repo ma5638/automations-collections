@@ -3,6 +3,9 @@ import json
 import feedparser
 import requests
 from datetime import datetime, timezone
+from dotenv import load_dotenv
+
+load_dotenv()
 
 FEEDS = {
     "The Hacker News":  "https://feeds.feedburner.com/TheHackersNews",

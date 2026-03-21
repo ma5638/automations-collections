@@ -1,0 +1,28 @@
+name: Weekly Claude AI Threat Briefing
+
+on:
+  schedule:
+    - cron: "30 18 * * 1"   # Monday 18:30 UTC = 10:30pm GMT+4
+  workflow_dispatch:          # run manually from GitHub UI anytime
+
+jobs:
+  claude-briefing:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests anthropic python-dotenv
+
+      - name: Claude AI Threat Briefing
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_KEY }}
+        run: python scripts/claude_digest.py

@@ -17,8 +17,8 @@ def get_claude_briefing():
             "role": "user",
             "content": (
                 f"Today is {today}. Search the web for today's top cybersecurity threats and risks "
-                f"from the last 24 hours. Find exactly 5 items total: 1-2 must be specific vulnerabilities "
-                f"(CVEs, patches, exploits), and the remaining 3-4 must be broader risks or threats "
+                f"from the last 24 hours. Find approx 5 items total: 1-2 must be specific vulnerabilities that includes very brief technical details"
+                f"(CVEs, patches, exploits), 1-2 must be broader risks or threats. 1-2 must be threat modelling related"
                 f"(breaches, ransomware, malware campaigns, nation-state activity, advisories). "
                 f"For each item write a 1-2 sentence summary explaining what happened and why it matters, "
                 f"and include the source URL. Present as a clean numbered list."
@@ -38,7 +38,7 @@ def get_claude_briefing():
         )
 
         print(f"[debug] stop_reason: {response.stop_reason}")
-        print(f"[debug] response.content: {len(response.content)}")
+        print(f"[debug] response.content: {len(str(response.content))}")
 
         for block in response.content:
             if block.type == "text":
@@ -56,7 +56,9 @@ def get_claude_briefing():
 
     briefing = "\n\n".join(all_text) if all_text else "No briefing available."
     if search_queries:
-        briefing += "\n\n🔍 **Searches:** " + " · ".join(f"`{q}`" for q in search_queries)
+        briefing += "\n\n🔍 **Searches:** " + " · ".join(
+            f"`{q}`" for q in search_queries
+        )
     return briefing
 
 
