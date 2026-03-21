@@ -2,6 +2,9 @@ import os
 import requests
 import anthropic
 from datetime import datetime, timezone
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def get_claude_briefing():
@@ -9,19 +12,23 @@ def get_claude_briefing():
     client = anthropic.Anthropic(api_key=os.environ["CLAUDE_API_KEY"])
     today = datetime.now(timezone.utc).strftime("%B %d, %Y")
 
-    messages = [{
-        "role": "user",
-        "content": (
-            f"Today is {today}. Search the web for the top cybersecurity news and threats "
-            f"from the last 24 hours. Find 5-7 significant stories covering major vulnerabilities, "
-            f"breaches, ransomware, malware campaigns, nation-state activity, or security advisories. "
-            f"For each story write a 1-2 sentence summary explaining what happened and why it matters, "
-            f"and include the source URL. Present as a clean numbered list."
-        ),
-    }]
+    messages = [
+        {
+            "role": "user",
+            "content": (
+                f"Today is {today}. Search the web for today's top cybersecurity threats and risks "
+                f"from the last 24 hours. Find exactly 5 items total: 1-2 must be specific vulnerabilities "
+                f"(CVEs, patches, exploits), and the remaining 3-4 must be broader risks or threats "
+                f"(breaches, ransomware, malware campaigns, nation-state activity, advisories). "
+                f"For each item write a 1-2 sentence summary explaining what happened and why it matters, "
+                f"and include the source URL. Present as a clean numbered list."
+            ),
+        }
+    ]
     tools = [{"type": "web_search_20260209", "name": "web_search"}]
 
     all_text = []
+    search_queries = []
     for _ in range(5):  # handle pause_turn continuations
         response = client.messages.create(
             model="claude-opus-4-6",
@@ -30,9 +37,16 @@ def get_claude_briefing():
             messages=messages,
         )
 
+        print(f"[debug] stop_reason: {response.stop_reason}")
+        print(f"[debug] response.content: {len(response.content)}")
+
         for block in response.content:
             if block.type == "text":
                 all_text.append(block.text)
+            elif block.type == "server_tool_use" and block.name == "web_search":
+                query = block.input.get("query", "")
+                if query:
+                    search_queries.append(query)
 
         if response.stop_reason in ("end_turn", "max_tokens"):
             break
@@ -40,7 +54,10 @@ def get_claude_briefing():
         # pause_turn: server-side tool loop hit its limit — append and retry
         messages.append({"role": "assistant", "content": response.content})
 
-    return "\n\n".join(all_text) if all_text else "No briefing available."
+    briefing = "\n\n".join(all_text) if all_text else "No briefing available."
+    if search_queries:
+        briefing += "\n\n🔍 **Searches:** " + " · ".join(f"`{q}`" for q in search_queries)
+    return briefing
 
 
 def build_payload(briefing_text):
@@ -51,13 +68,17 @@ def build_payload(briefing_text):
     return {
         "username": "CyberWatch",
         "avatar_url": "https://cdn-icons-png.flaticon.com/512/2092/2092757.png",
-        "embeds": [{
-            "title": f"🤖 Claude AI Threat Briefing — {today}",
-            "description": briefing_text,
-            "color": 0xEB459E,
-            "footer": {"text": "Powered by Claude Opus 4.6 • automations-collections"},
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        }],
+        "embeds": [
+            {
+                "title": f"🤖 Claude AI Threat Briefing — {today}",
+                "description": briefing_text,
+                "color": 0xEB459E,
+                "footer": {
+                    "text": "Powered by Claude Opus 4.6 • automations-collections"
+                },
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+        ],
     }
 
 
