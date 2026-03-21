@@ -16,8 +16,8 @@ def get_claude_briefing():
         {
             "role": "user",
             "content": (
-                f"Today is {today}. Search the web for today's top cybersecurity threats and risks "
-                f"from the last 24 hours. Find approx 5 items total: 1-2 must be specific vulnerabilities that includes very brief technical details"
+                f"Today is {today}. Search the web for the past week's top cybersecurity threats and risks."
+                f"1-2 must be specific vulnerabilities that includes very brief technical details"
                 f"(CVEs, patches, exploits), 1-2 must be broader risks or threats. 1-2 must be threat modelling related"
                 f"(breaches, ransomware, malware campaigns, nation-state activity, advisories). "
                 f"For each item write a 1-2 sentence summary explaining what happened and why it matters, "

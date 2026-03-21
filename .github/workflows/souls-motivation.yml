@@ -1,0 +1,26 @@
+# name: Souls-like Daily Motivation
+
+# on:
+#   workflow_dispatch:   # manual trigger for now — add schedule once you pick a time
+
+# jobs:
+#   souls-motivation:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout repo
+#         uses: actions/checkout@v4
+
+#       - name: Set up Python
+#         uses: actions/setup-python@v5
+#         with:
+#           python-version: "3.12"
+
+#       - name: Install dependencies
+#         run: pip install requests anthropic python-dotenv
+
+#       - name: Send Souls Motivation
+#         env:
+#           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+#           CLAUDE_API_KEY: ${{ secrets.CLAUDE_KEY }}
+#         run: python scripts/souls_motivation.py
