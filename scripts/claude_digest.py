@@ -37,7 +37,7 @@ def get_claude_briefing():
         messages.append({"role": "assistant", "content": response.content})
 
     text_blocks = [b.text for b in response.content if b.type == "text"]
-    return text_blocks[-1] if text_blocks else "No briefing available."
+    return "\n\n".join(text_blocks) if text_blocks else "No briefing available."
 
 
 def build_payload(briefing_text):
