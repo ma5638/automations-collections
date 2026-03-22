@@ -2,7 +2,7 @@ name: Daily Cybersecurity Digest
 
 on:
   schedule:
-    - cron: "0 12 * * *"   # 12:00 UTC daily (8am ET / 7am CT)
+    - cron: "0 6 * * *"   # 06:00 UTC = 10:00 GMT+4 daily
   workflow_dispatch:        # run manually from GitHub UI anytime
 
 jobs:
