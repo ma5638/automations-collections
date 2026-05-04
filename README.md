@@ -29,3 +29,9 @@ Runs every day at 12:00 UTC and posts the latest headlines from 5 security sourc
 ### 3. Enable Actions
 GitHub Actions will run automatically once the secret is set.
 You can also trigger a test run manually: **Actions** tab → **Daily Cybersecurity Digest** → **Run workflow**.
+
+
+# TODO
+- cybersecuritydive
+- better flow for summarization = large and wide variety of links -> let claude choose links -> summarize specific links
+- train on exact kind of urls needed
