@@ -35,3 +35,4 @@ You can also trigger a test run manually: **Actions** tab → **Daily Cybersecur
 - cybersecuritydive
 - better flow for summarization = large and wide variety of links -> let claude choose links -> summarize specific links
 - train on exact kind of urls needed
+
