@@ -5,9 +5,6 @@ on:
     - cron: "0 6 * * *"   # 06:00 UTC = 10:00 GMT+4 daily
   workflow_dispatch:        # run manually from GitHub UI anytime
 
-permissions:
-  contents: write
-
 jobs:
   send-digest:
     runs-on: ubuntu-latest
@@ -27,10 +24,6 @@ jobs:
       - name: RSS Feed Digest
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          WEB_API_URL: ${{ vars.WEB_API_URL }}
+          WEB_API_KEY: ${{ secrets.WEB_API_KEY }}
         run: python scripts/cybersec_digest.py
-
-      - name: Commit updated dedup state
-        uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d  # v7.2.0
-        with:
-          commit_message: "chore: update seen-articles dedup state"
-          file_pattern: state/seen_articles.json

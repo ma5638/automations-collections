@@ -6,7 +6,6 @@ on:
   workflow_dispatch:          # run manually from GitHub UI anytime
 
 permissions:
-  contents: write
   id-token: write
 
 jobs:
@@ -19,12 +18,13 @@ jobs:
 
       - name: Load previously shared links
         id: seen
+        env:
+          WEB_API_URL: ${{ vars.WEB_API_URL }}
+          WEB_API_KEY: ${{ secrets.WEB_API_KEY }}
         run: |
-          if [ -f state/claude_briefing_seen_links.json ]; then
-            LINKS=$(python3 -c "import json; data = json.load(open('state/claude_briefing_seen_links.json')); print(chr(10).join(data) if data else '(none yet)')")
-          else
-            LINKS="(none yet)"
-          fi
+          LINKS=$(curl -sS "$WEB_API_URL/state/automations-collections/claude-briefing-seen-links" \
+            -H "Authorization: Bearer $WEB_API_KEY" \
+            | python3 -c "import json, sys; data = json.load(sys.stdin).get('value') or []; print(chr(10).join(data) if data else '(none yet)')")
           {
             echo "links<<SEENLINKSEOF"
             echo "$LINKS"
@@ -67,10 +67,6 @@ jobs:
       - name: Post to Discord
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          WEB_API_URL: ${{ vars.WEB_API_URL }}
+          WEB_API_KEY: ${{ secrets.WEB_API_KEY }}
         run: python scripts/post_claude_briefing.py
-
-      - name: Commit updated seen-links state
-        uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d  # v7.2.0
-        with:
-          commit_message: "chore: update claude-briefing seen-links state"
-          file_pattern: state/claude_briefing_seen_links.json
