@@ -6,7 +6,7 @@ on:
   workflow_dispatch:          # run manually from GitHub UI anytime
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 jobs:
@@ -16,6 +16,20 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+
+      - name: Load previously shared links
+        id: seen
+        run: |
+          if [ -f state/claude_briefing_seen_links.json ]; then
+            LINKS=$(python3 -c "import json; data = json.load(open('state/claude_briefing_seen_links.json')); print(chr(10).join(data) if data else '(none yet)')")
+          else
+            LINKS="(none yet)"
+          fi
+          {
+            echo "links<<SEENLINKSEOF"
+            echo "$LINKS"
+            echo "SEENLINKSEOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Ask Claude for the briefing
         uses: anthropics/claude-code-action@6b082c41935b4c8a3b8b0ef85ba4ba4d9eeb8975  # v1.0.189
@@ -30,6 +44,11 @@ jobs:
             a 1-2 sentence summary of what happened and why it matters, and
             include the source URL. Separate items with a blank line. Do not
             include a title or preamble.
+
+            Do not reuse any of the following URLs — they were already shared
+            in a previous briefing, so find different stories or different
+            sources instead:
+            ${{ steps.seen.outputs.links }}
 
             Write the complete briefing text, and nothing else, to a file
             named briefing_output.md in the current directory.
@@ -49,3 +68,9 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python scripts/post_claude_briefing.py
+
+      - name: Commit updated seen-links state
+        uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d  # v7.2.0
+        with:
+          commit_message: "chore: update claude-briefing seen-links state"
+          file_pattern: state/claude_briefing_seen_links.json
