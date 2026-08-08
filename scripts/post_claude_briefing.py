@@ -1,4 +1,3 @@
-import json
 import os
 import re
 import sys
@@ -7,7 +6,7 @@ from datetime import datetime, timezone
 
 DISCORD_WEBHOOK_URL_ENV = "DISCORD_WEBHOOK_URL"
 BRIEFING_FILE = "briefing_output.md"
-STATE_FILE = "state/claude_briefing_seen_links.json"
+STATE_NAMESPACE = "automations-collections/claude-briefing-seen-links"
 MAX_SEEN = 100
 
 MAX_EMBED_LEN = 4096
@@ -63,18 +62,20 @@ def build_payload(chunk, part, total):
     }
 
 
-def load_seen():
-    if not os.path.exists(STATE_FILE):
-        return []
-    with open(STATE_FILE) as f:
-        return json.load(f)
+def web_api_headers():
+    return {"Authorization": f"Bearer {os.environ['WEB_API_KEY']}"}
 
 
-def save_seen(seen_list):
-    trimmed = seen_list[-MAX_SEEN:]
-    os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
-    with open(STATE_FILE, "w") as f:
-        json.dump(trimmed, f, indent=2)
+def save_seen(new_links):
+    if not new_links:
+        return
+    base_url = os.environ["WEB_API_URL"]
+    resp = requests.post(
+        f"{base_url}/state/{STATE_NAMESPACE}/append",
+        headers=web_api_headers(),
+        json={"items": new_links, "max_items": MAX_SEEN},
+    )
+    resp.raise_for_status()
 
 
 def extract_links(text):
@@ -107,10 +108,8 @@ def main():
 
     new_links = extract_links(briefing)
     if new_links:
-        seen = load_seen()
-        seen.extend(new_links)
-        save_seen(seen)
-        print(f"Recorded {len(new_links)} link(s) to {STATE_FILE}")
+        save_seen(new_links)
+        print(f"Recorded {len(new_links)} link(s) to {STATE_NAMESPACE}")
 
 
 if __name__ == "__main__":

@@ -11,18 +11,9 @@ Scheduled GitHub Actions that post cybersecurity news to Discord. See `README.md
 
 Both actions are pinned to commit SHAs, not floating tags (`stefanzweifel/git-auto-commit-action@4a55954c...`, `anthropics/claude-code-action@6b082c41...`) — supply-chain safety. Update the SHA comment alongside the SHA when bumping versions.
 
-## Current state storage (git-committed JSON — pending migration, see below)
+## Current state storage (personal-generic-server)
 
-Both workflows currently dedupe by committing a small JSON file back to the repo via `stefanzweifel/git-auto-commit-action`:
-
-- `state/seen_articles.json` — last 200 posted article URLs (digest)
-- `state/claude_briefing_seen_links.json` — last 100 links Claude has already cited, injected into the next week's prompt so it doesn't repeat sources (`MAX_SEEN = 100` in `scripts/post_claude_briefing.py`)
-
-Both workflows need `permissions: contents: write` for this to work, and a fine-grained PAT with `Workflows: write` scope if you're pushing changes to the `.yml` files themselves from outside the Actions runner.
-
-### Pending: migrate to personal-generic-server
-
-This repo-local git-commit approach only works because state is scoped to one repo. There's now a shared cross-project service for exactly this — **`ma5638/personal-generic-server`**, a FastAPI service on Cloud Run + Firestore (see that repo's `AGENTS.md` for full deploy/ops details). It exposes:
+Both workflows dedupe against state held by **`ma5638/personal-generic-server`**, a shared cross-project FastAPI service on Cloud Run + Firestore (see that repo's `AGENTS.md` for full deploy/ops details). It exposes:
 
 ```
 GET    /state/{namespace}
@@ -31,11 +22,14 @@ DELETE /state/{namespace}
 POST   /state/{namespace}/append   # dedupe + trim to max_items, returns the new list
 ```
 
-The repo secret `WEB_API_KEY` has already been added (holds the same value as the `personal-generic-server-api-key` Secret Manager secret) but **the workflow/script changes to actually call it have not been made yet**. To finish the migration:
+- `automations-collections/seen-articles` — last 200 posted article URLs (digest), read/written from `scripts/cybersec_digest.py`
+- `automations-collections/claude-briefing-seen-links` — last 100 links Claude has already cited (`MAX_SEEN = 100` in `scripts/post_claude_briefing.py`), fetched in the "Load previously shared links" step of `claude-briefing.yml` and injected into the next week's prompt so it doesn't repeat sources
 
-1. In `scripts/cybersec_digest.py` and `scripts/post_claude_briefing.py`, replace `load_seen()`/`save_seen()` (local file read/write) with `GET`/`POST .../append` calls against `https://personal-generic-server-13749068528.europe-west1.run.app/state/<namespace>` using `Authorization: Bearer ${WEB_API_KEY}`. Suggested namespaces: `automations-collections/seen-articles`, `automations-collections/claude-briefing-seen-links`.
-2. Pass `WEB_API_KEY: ${{ secrets.WEB_API_KEY }}` into the relevant `run:` steps' `env:`.
-3. Remove the `git-auto-commit-action` steps and the `contents: write` permission (no longer needed once state isn't git-committed) and delete the now-unused `state/*.json` files.
+Two things wire each workflow step to the service:
+- Repo variable `WEB_API_URL` — the Cloud Run base URL (non-secret, so it's a `vars.*` entry, not a secret)
+- Repo secret `WEB_API_KEY` — same value as the `personal-generic-server-api-key` Secret Manager secret, sent as `Authorization: Bearer ${WEB_API_KEY}`
+
+Neither workflow needs `contents: write` or `git-auto-commit-action` anymore — nothing is git-committed at runtime.
 
 ## Gotchas already hit in this repo
 

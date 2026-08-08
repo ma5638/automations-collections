@@ -1,5 +1,4 @@
 import os
-import json
 import feedparser
 import requests
 from datetime import datetime, timezone
@@ -17,22 +16,31 @@ FEEDS = {
 
 MAX_PER_FEED = 3
 FETCH_POOL = 15
-STATE_FILE = "state/seen_articles.json"
+STATE_NAMESPACE = "automations-collections/seen-articles"
 MAX_SEEN = 200
 
 
+def web_api_headers():
+    return {"Authorization": f"Bearer {os.environ['WEB_API_KEY']}"}
+
+
 def load_seen():
-    if not os.path.exists(STATE_FILE):
-        return []
-    with open(STATE_FILE) as f:
-        return json.load(f)
+    base_url = os.environ["WEB_API_URL"]
+    resp = requests.get(f"{base_url}/state/{STATE_NAMESPACE}", headers=web_api_headers())
+    resp.raise_for_status()
+    return resp.json().get("value") or []
 
 
-def save_seen(seen_list):
-    trimmed = seen_list[-MAX_SEEN:]
-    os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
-    with open(STATE_FILE, "w") as f:
-        json.dump(trimmed, f, indent=2)
+def save_seen(new_links):
+    if not new_links:
+        return
+    base_url = os.environ["WEB_API_URL"]
+    resp = requests.post(
+        f"{base_url}/state/{STATE_NAMESPACE}/append",
+        headers=web_api_headers(),
+        json={"items": new_links, "max_items": MAX_SEEN},
+    )
+    resp.raise_for_status()
 
 
 def fetch_feed(name, url, seen_set):
@@ -108,9 +116,7 @@ def main():
         for a in articles
         if a["link"]
     ]
-    if posted_links:
-        seen.extend(posted_links)
-        save_seen(seen)
+    save_seen(posted_links)
 
 
 if __name__ == "__main__":
