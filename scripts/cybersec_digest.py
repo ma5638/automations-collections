@@ -18,7 +18,7 @@ FEEDS = {
 MAX_PER_FEED = 3
 FETCH_POOL = 15
 STATE_FILE = "state/seen_articles.json"
-MAX_SEEN = 1000
+MAX_SEEN = 200
 
 
 def load_seen():

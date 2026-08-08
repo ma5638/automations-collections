@@ -1,13 +1,19 @@
+import json
 import os
+import re
 import sys
 import requests
 from datetime import datetime, timezone
 
 DISCORD_WEBHOOK_URL_ENV = "DISCORD_WEBHOOK_URL"
 BRIEFING_FILE = "briefing_output.md"
+STATE_FILE = "state/claude_briefing_seen_links.json"
+MAX_SEEN = 100
 
 MAX_EMBED_LEN = 4096
 MAX_MESSAGES = 4
+
+URL_RE = re.compile(r'https?://[^\s<>()\[\]"\']+')
 
 
 def split_into_chunks(text, max_len=MAX_EMBED_LEN, max_chunks=MAX_MESSAGES):
@@ -57,6 +63,24 @@ def build_payload(chunk, part, total):
     }
 
 
+def load_seen():
+    if not os.path.exists(STATE_FILE):
+        return []
+    with open(STATE_FILE) as f:
+        return json.load(f)
+
+
+def save_seen(seen_list):
+    trimmed = seen_list[-MAX_SEEN:]
+    os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+    with open(STATE_FILE, "w") as f:
+        json.dump(trimmed, f, indent=2)
+
+
+def extract_links(text):
+    return [match.rstrip(".,;:!?") for match in URL_RE.findall(text)]
+
+
 def main():
     webhook_url = os.environ.get(DISCORD_WEBHOOK_URL_ENV)
     if not webhook_url:
@@ -80,6 +104,13 @@ def main():
         resp = requests.post(webhook_url, json=payload)
         resp.raise_for_status()
         print(f"Claude briefing sent — part {i}/{total} — HTTP {resp.status_code}")
+
+    new_links = extract_links(briefing)
+    if new_links:
+        seen = load_seen()
+        seen.extend(new_links)
+        save_seen(seen)
+        print(f"Recorded {len(new_links)} link(s) to {STATE_FILE}")
 
 
 if __name__ == "__main__":
