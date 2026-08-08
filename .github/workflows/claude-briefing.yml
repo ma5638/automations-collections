@@ -7,10 +7,10 @@ on:
     inputs:
       extra_instruction:
         description: >
-          Optional extra instruction. When sent via Discord's /more-news,
-          personal-generic-server pre-wraps this in a random
-          <instruction-XXXXXXXX> tag before dispatching — see the prompt
-          below for how it's treated.
+          Optional extra instruction (e.g. from Discord's /more-news).
+          Wrapped in a random <instruction-XXXXXXXX> tag by the "Wrap
+          extra instruction" step below before it reaches the prompt —
+          see that step and the prompt for how it's treated.
         required: false
         default: ""
 
@@ -40,6 +40,29 @@ jobs:
             echo "SEENLINKSEOF"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Wrap extra instruction as untrusted input
+        id: wrap
+        env:
+          # Passed via env, NOT interpolated into the script body below —
+          # this value is attacker-controllable (arrives from a Discord
+          # command), and inlining `${{ }}` directly into a `run:` script
+          # is a classic GitHub Actions script-injection hole (the
+          # expression is substituted as raw text before the shell parses
+          # it). Reading it back as $RAW_INSTRUCTION is safe.
+          RAW_INSTRUCTION: ${{ github.event.inputs.extra_instruction }}
+        run: |
+          if [ -n "$RAW_INSTRUCTION" ]; then
+            TAG="instruction-$(openssl rand -hex 4)"
+            WRAPPED="<${TAG}>${RAW_INSTRUCTION}</${TAG}>"
+          else
+            WRAPPED=""
+          fi
+          {
+            echo "wrapped<<WRAPPEDEOF"
+            echo "$WRAPPED"
+            echo "WRAPPEDEOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Ask Claude for the briefing
         uses: anthropics/claude-code-action@6b082c41935b4c8a3b8b0ef85ba4ba4d9eeb8975  # v1.0.189
         with:
@@ -65,7 +88,7 @@ jobs:
 
             Optional extra instruction from whoever triggered this run, which
             may be empty:
-            ${{ github.event.inputs.extra_instruction }}
+            ${{ steps.wrap.outputs.wrapped }}
 
             If that line is empty, ignore this paragraph entirely. Otherwise,
             it will be wrapped in a tag like <instruction-XXXXXXXX>...</instruction-XXXXXXXX>,
