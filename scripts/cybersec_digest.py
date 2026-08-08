@@ -16,21 +16,44 @@ FEEDS = {
 }
 
 MAX_PER_FEED = 3
+FETCH_POOL = 15
+STATE_FILE = "state/seen_articles.json"
+MAX_SEEN = 1000
 
 
-def fetch_feed(name, url):
+def load_seen():
+    if not os.path.exists(STATE_FILE):
+        return []
+    with open(STATE_FILE) as f:
+        return json.load(f)
+
+
+def save_seen(seen_list):
+    trimmed = seen_list[-MAX_SEEN:]
+    os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+    with open(STATE_FILE, "w") as f:
+        json.dump(trimmed, f, indent=2)
+
+
+def fetch_feed(name, url, seen_set):
     try:
         feed = feedparser.parse(url)
-        items = []
-        for entry in feed.entries[:MAX_PER_FEED]:
-            items.append({
-                "title": entry.get("title", "No title").strip(),
-                "link":  entry.get("link", ""),
-            })
-        return items
     except Exception as e:
         print(f"[warn] Could not fetch {name}: {e}")
-        return []
+        return None
+
+    items = []
+    for entry in feed.entries[:FETCH_POOL]:
+        link = entry.get("link", "")
+        if link in seen_set:
+            continue
+        items.append({
+            "title": entry.get("title", "No title").strip(),
+            "link": link,
+        })
+        if len(items) >= MAX_PER_FEED:
+            break
+    return items
 
 
 def build_payload(articles_by_source):
@@ -38,9 +61,12 @@ def build_payload(articles_by_source):
     fields = []
 
     for source, articles in articles_by_source.items():
-        if not articles:
+        if articles is None:
             continue
-        value = "\n".join(f"[{a['title']}]({a['link']})" for a in articles)
+        if articles:
+            value = "\n".join(f"[{a['title']}]({a['link']})" for a in articles)
+        else:
+            value = "No new items since last digest."
         fields.append({
             "name": f"📰 {source}",
             "value": value[:1024],
@@ -65,12 +91,26 @@ def main():
     if not webhook_url:
         raise ValueError("DISCORD_WEBHOOK_URL is not set")
 
-    articles_by_source = {name: fetch_feed(name, url) for name, url in FEEDS.items()}
+    seen = load_seen()
+    seen_set = set(seen)
+
+    articles_by_source = {name: fetch_feed(name, url, seen_set) for name, url in FEEDS.items()}
     payload = build_payload(articles_by_source)
 
     resp = requests.post(webhook_url, json=payload)
     resp.raise_for_status()
     print(f"Digest sent — HTTP {resp.status_code}")
+
+    posted_links = [
+        a["link"]
+        for articles in articles_by_source.values()
+        if articles
+        for a in articles
+        if a["link"]
+    ]
+    if posted_links:
+        seen.extend(posted_links)
+        save_seen(seen)
 
 
 if __name__ == "__main__":
