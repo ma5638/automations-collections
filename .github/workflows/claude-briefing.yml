@@ -38,12 +38,16 @@ jobs:
           prompt: |
             Search the web for the past week's top cybersecurity threats and
             risks. Include 1-2 items on specific vulnerabilities (CVEs, patches,
-            exploits) with brief technical detail, 1-2 on broader risks or
-            threats, and 1-2 on threat modelling (breaches, ransomware, malware
-            campaigns, nation-state activity, advisories). For each item, write
-            a 1-2 sentence summary of what happened and why it matters, and
-            include the source URL. Separate items with a blank line. Do not
-            include a title or preamble.
+            exploits), 1-2 on broader risks or threats, and 1-2 on threat
+            modelling (breaches, ransomware, malware campaigns, nation-state
+            activity, advisories).
+
+            Write like you're texting a friend who's into security, not filing
+            a report: natural, conversational voice, no corporate or
+            report-speak. Be very brief — one short sentence per item covering
+            what happened and why it matters, then the source URL on the same
+            line. Separate items with a blank line. Do not include a title or
+            preamble.
 
             Do not reuse any of the following URLs — they were already shared
             in a previous briefing, so find different stories or different
