@@ -5,6 +5,10 @@ on:
     - cron: "30 6 * * 1"    # Monday 06:30 UTC = 10:30am GMT+4
   workflow_dispatch:          # run manually from GitHub UI anytime
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   claude-briefing:
     runs-on: ubuntu-latest
@@ -13,16 +17,35 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Ask Claude for the briefing
+        uses: anthropics/claude-code-action@6b082c41935b4c8a3b8b0ef85ba4ba4d9eeb8975  # v1.0.189
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Search the web for the past week's top cybersecurity threats and
+            risks. Include 1-2 items on specific vulnerabilities (CVEs, patches,
+            exploits) with brief technical detail, 1-2 on broader risks or
+            threats, and 1-2 on threat modelling (breaches, ransomware, malware
+            campaigns, nation-state activity, advisories). For each item, write
+            a 1-2 sentence summary of what happened and why it matters, and
+            include the source URL. Separate items with a blank line. Do not
+            include a title or preamble.
+
+            Write the complete briefing text, and nothing else, to a file
+            named briefing_output.md in the current directory.
+          claude_args: |
+            --model claude-haiku-4-5
+            --allowedTools "WebSearch,Write"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install requests anthropic python-dotenv
+        run: pip install requests
 
-      - name: Claude AI Threat Briefing
+      - name: Post to Discord
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          CLAUDE_API_KEY: ${{ secrets.CLAUDE_KEY }}
-        run: python scripts/claude_digest.py
+        run: python scripts/post_claude_briefing.py
